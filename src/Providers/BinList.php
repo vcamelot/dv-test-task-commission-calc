@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\Response;
 
 class BinList extends AbstractHttpProvider
@@ -17,6 +18,7 @@ class BinList extends AbstractHttpProvider
      *
      * @param int $bin
      * @return string|bool
+     * @throws GuzzleException
      */
     public function fetchCountry(int $bin): string|bool
     {

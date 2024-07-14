@@ -2,9 +2,10 @@
 
 namespace App\Calculator;
 
+use App\Country;
 use App\Data\OurDataRow;
 use App\DataReader\AbstractReader;
-use App\Providers\AbstractProvider;
+use App\Providers\AbstractHttpProvider;
 use App\Validator\Validator;
 use Exception;
 
@@ -13,8 +14,8 @@ class OurCalculator extends Calculator
 
     public function __construct(protected readonly AbstractReader $reader,
                                 protected readonly Validator      $validator,
-                                protected AbstractProvider        $binProvider,
-                                protected AbstractProvider        $ratesProvider
+                                protected AbstractHttpProvider    $binProvider,
+                                protected AbstractHttpProvider    $ratesProvider
     )
     {
         parent::__construct($binProvider, $ratesProvider);
@@ -52,31 +53,59 @@ class OurCalculator extends Calculator
 
     public function calculateCommission(): bool
     {
-        foreach ($this->data as $item) {
+        if (!$this->fetchRates()) {
+            return false;
+        }
+
+        foreach ($this->data as &$item) {
             $row = $item->toArray();
-            $this->calculateSingleRow($row);
-
-
+            $commission = $this->calculateSingleCommission($row['bin'], $row['amount'], $row['currency']);
+            if (!$commission) {
+                return false;
+            }
+            $item->setCommission($commission);
         }
 
         return true;
     }
 
-    public
-    function getCommission(): array
+    public function getCommission(): array
     {
         $result = [];
         foreach ($this->data as $row) {
-            $result[] = $row->commission();
+            $result[] = $this->formatOutput($row);
         }
 
         return $result;
     }
 
-    private function calculateSingleRow(array $row): float|bool
+    private function calculateSingleCommission(int $bin, float $amount, string $currency): float|bool
     {
-        $country = $this->binProvider->fetchCountry($row['bin']);
+        $country = $this->countryFindOrUpdate($bin);
+        if (!$country) {
+            return false;
+        }
 
-        return $country;
+        $rate = $this->getRate($currency);
+        if (!$rate) {
+            $this->errors[] = "Rate not found for currency `{$currency}`";
+            return false;
+        }
+
+        if ($rate != 0) {
+            $amount /= $rate;
+        }
+
+        if (Country::isEUCountry($country)) {
+            $amount *= 0.01;
+        } else {
+            $amount *= 0.02;
+        }
+
+        return $amount;
+    }
+
+    private function formatOutput(OurDataRow $row): string {
+        return round($row->commission(), 2);
     }
 }

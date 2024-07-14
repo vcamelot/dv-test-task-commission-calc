@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Config\Config;
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\Response;
 
 class ApiLayer extends AbstractHttpProvider
@@ -9,15 +11,18 @@ class ApiLayer extends AbstractHttpProvider
     protected bool $requiresAuthentication = false;
     protected string $url = 'https://api.apilayer.com/exchangerates_data/latest';
 
+    /**
+     * @throws GuzzleException
+     */
     public function fetchRates(): array|bool
     {
         $options = [
             'headers' => [
-                'apikey' => getenv('APILAYER_KEY')
+                'apikey' => Config::getEnv('APILAYER_KEY')
             ]
         ];
 
-        $response = $this->fetch($this->url, 'GET', '', $options);
+        $response = $this->fetch($this->url, 'GET', $options);
 
         if (!$response) {
             return false;

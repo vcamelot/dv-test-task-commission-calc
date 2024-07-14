@@ -29,4 +29,8 @@ class OurDataRow extends DataRow
         return $this->commission;
     }
 
+    public function setCommission(float $commission): void {
+        $this->commission = $commission;
+    }
+
 }
